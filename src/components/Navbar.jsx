@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo, useRef } from "react";
 import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -10,157 +10,185 @@ const navItems = [
   { href: "#contact", label: "Contact" },
 ];
 
-const animations = {
-  hamburger: { duration: 0.15, ease: "easeOut" },
-  desktopMenu: { duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] },
-  mobileMenu: { duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }
+// keep variants outside so they're not recreated
+const variants = {
+  button: {
+    open: { scale: 0, opacity: 0, transition: { duration: 0.15 } },
+    closed: { scale: 1, opacity: 1, transition: { duration: 0.15 } },
+  },
+  menu: {
+    desktop: {
+      closed: { scaleY: 0, opacity: 0, y: -10 },
+      open: { scaleY: 1, opacity: 1, y: 0 },
+    },
+    mobile: {
+      closed: { scaleX: 0, opacity: 0, x: 10 },
+      open: { scaleX: 1, opacity: 1, x: 0 },
+    },
+  },
 };
 
-const styles = {
-  desktop: "hidden sm:block fixed top-8 right-8 z-50 transition-all duration-300",
-  mobile: "sm:hidden fixed top-6 right-6 z-50 transition-all duration-300",
-  desktopHamburger: "w-12 h-12 rounded-full bg-gray-900/60 backdrop-blur-md border border-gray-700/20 flex items-center justify-center text-gray-300 hover:text-cyan-400 transition-all duration-300 shadow-lg shadow-black/20",
-  desktopNav: "bg-gray-900/60 backdrop-blur-md border border-gray-700/20 rounded-2xl px-6 py-6 flex flex-col space-y-4 whitespace-nowrap min-w-max shadow-lg shadow-black/20",
-  hamburgerBtn: "w-12 h-12 rounded-full bg-gray-900/80 backdrop-blur-md border border-gray-700/50 flex items-center justify-center text-gray-300 hover:text-cyan-400 transition-all duration-300 shadow-lg shadow-black/20",
-  mobileNav: "bg-gray-900/90 backdrop-blur-md border border-gray-700/50 rounded-full px-4 py-3 flex items-center space-x-3 whitespace-nowrap min-w-max shadow-lg shadow-black/20",
-  closeBtn: "w-7 h-7 rounded-full bg-gray-800/50 flex items-center justify-center text-gray-400 hover:text-cyan-400 transition-colors duration-200 flex-shrink-0",
-  navLink: {
-    desktop: "text-gray-300 hover:text-cyan-400 transition-colors duration-200 text-base px-2 text-center font-medium",
-    mobile: "text-gray-300 hover:text-cyan-400 transition-colors duration-200 text-sm px-2"
-  }
-};
+const NavLink = memo(({ href, label, onClick, className }) => (
+  <motion.a
+    href={href}
+    onClick={onClick}
+    className={className}
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    style={{ transform: "translateZ(0)" }}
+  >
+    {label}
+  </motion.a>
+));
+
+const MenuContent = memo(({ isMobile, onClose, handleNavClick }) => (
+  <motion.nav
+    className={`${
+      isMobile
+        ? "bg-gray-900/95 border border-gray-700/50 rounded-full px-4 py-3 flex items-center space-x-3"
+        : "bg-gray-900/95 border border-gray-700/30 rounded-2xl px-6 py-6 flex flex-col space-y-4"
+    } whitespace-nowrap min-w-max shadow-lg shadow-black/20`}
+    style={{ transform: "translateZ(0)" }}
+  >
+    {navItems.map(({ href, label }) => (
+      <NavLink
+        key={href}
+        href={href}
+        label={label}
+        onClick={(e) => handleNavClick(e, href)}
+        className={`text-gray-300 hover:text-cyan-400 ${
+          isMobile ? "text-sm px-2" : "text-base px-2 text-center font-medium"
+        }`}
+      />
+    ))}
+    <motion.button
+      onClick={onClose}
+      className="w-7 h-7 rounded-full bg-gray-800/50 flex items-center justify-center text-gray-400 hover:text-cyan-400 flex-shrink-0"
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      style={{ transform: "translateZ(0)" }}
+    >
+      <X className="w-4 h-4" />
+    </motion.button>
+  </motion.nav>
+));
 
 export default function Navbar() {
   const [scrollDirection, setScrollDirection] = useState("up");
-  const [lastScrollY, setLastScrollY] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDesktopMenuOpen, setIsDesktopMenuOpen] = useState(false);
+  const lastScrollY = useRef(0);
 
+  // Optimized scroll handler
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      setScrollDirection(currentScrollY > lastScrollY && currentScrollY > 50 ? "down" : "up");
-      setLastScrollY(currentScrollY);
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY;
+          setScrollDirection(
+            currentScrollY > lastScrollY.current && currentScrollY > 50
+              ? "down"
+              : "up"
+          );
+          lastScrollY.current = currentScrollY;
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
-
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [lastScrollY]);
+  }, []);
 
-  const isVisible = scrollDirection === "up" || lastScrollY < 50;
-  const visibilityClass = isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full";
+  const isVisible = scrollDirection === "up" || lastScrollY.current < 50;
 
-  const handleNavClick = (e, href) => {
+  const handleNavClick = useCallback((e, href) => {
+    e.preventDefault();
     setIsMobileMenuOpen(false);
     setIsDesktopMenuOpen(false);
-    e.preventDefault();
-    const target = document.querySelector(href);
-    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
-  const toggleDesktopMenu = () => setIsDesktopMenuOpen(!isDesktopMenuOpen);
+    document.querySelector(href)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, []);
 
   return (
     <>
-      <header className={`${styles.desktop} ${visibilityClass}`}>
-        <div className="relative">
-          <motion.button
-            onClick={toggleDesktopMenu}
-            className={styles.desktopHamburger}
-            animate={{ scale: isDesktopMenuOpen ? 0 : 1, opacity: isDesktopMenuOpen ? 0 : 1 }}
-            transition={animations.hamburger}
-          >
-            <Menu className="w-6 h-6" />
-          </motion.button>
+      {/* Desktop */}
+      <header
+        className="hidden sm:block fixed top-8 right-8 z-50 transition-transform duration-300"
+        style={{
+          transform: isVisible ? "translateY(0)" : "translateY(-100%)",
+          opacity: isVisible ? 1 : 0,
+        }}
+      >
+        <motion.button
+          onClick={() => setIsDesktopMenuOpen((p) => !p)}
+          className="w-12 h-12 rounded-full bg-gray-900/90 border border-gray-700/30 flex items-center justify-center text-gray-300 hover:text-cyan-400 shadow-lg shadow-black/20"
+          variants={variants.button}
+          animate={isDesktopMenuOpen ? "open" : "closed"}
+          style={{ transform: "translateZ(0)" }}
+        >
+          <Menu className="w-6 h-6" />
+        </motion.button>
 
-          <AnimatePresence>
-            {isDesktopMenuOpen && (
-              <motion.div
-                initial={{ scaleY: 0, opacity: 0, y: -10 }}
-                animate={{ scaleY: 1, opacity: 1, y: 0 }}
-                exit={{ scaleY: 0, opacity: 0, y: -10 }}
-                transition={animations.desktopMenu}
-                className="absolute top-0 right-0 origin-top"
-              >
-                <nav className={styles.desktopNav}>
-                  {navItems.map(({ href, label }, index) => (
-                    <motion.a
-                      key={href}
-                      href={href}
-                      onClick={(e) => handleNavClick(e, href)}
-                      className={styles.navLink.desktop}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05, duration: 0.2 }}
-                    >
-                      {label}
-                    </motion.a>
-                  ))}
-                  <motion.button 
-                    onClick={toggleDesktopMenu} 
-                    className={styles.closeBtn}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.1, duration: 0.2 }}
-                  >
-                    <X className="w-4 h-4" />
-                  </motion.button>
-                </nav>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        <AnimatePresence>
+          {isDesktopMenuOpen && (
+            <motion.div
+              variants={variants.menu.desktop}
+              initial="closed"
+              animate="open"
+              exit="closed"
+              className="absolute top-0 right-0 origin-top"
+              style={{ transform: "translateZ(0)" }}
+            >
+              <MenuContent
+                isMobile={false}
+                onClose={() => setIsDesktopMenuOpen(false)}
+                handleNavClick={handleNavClick}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
-      <header className={`${styles.mobile} ${visibilityClass}`}>
-        <div className="relative">
-          <motion.button
-            onClick={toggleMobileMenu}
-            className={styles.hamburgerBtn}
-            animate={{ scale: isMobileMenuOpen ? 0 : 1, opacity: isMobileMenuOpen ? 0 : 1 }}
-            transition={animations.hamburger}
-          >
-            <Menu className="w-6 h-6" />
-          </motion.button>
+      {/* Mobile */}
+      <header
+        className="sm:hidden fixed top-6 right-6 z-50 transition-transform duration-300"
+        style={{
+          transform: isVisible ? "translateY(0)" : "translateY(-100%)",
+          opacity: isVisible ? 1 : 0,
+        }}
+      >
+        <motion.button
+          onClick={() => setIsMobileMenuOpen((p) => !p)}
+          className="w-12 h-12 rounded-full bg-gray-900/90 border border-gray-700/50 flex items-center justify-center text-gray-300 hover:text-cyan-400 shadow-lg shadow-black/20"
+          variants={variants.button}
+          animate={isMobileMenuOpen ? "open" : "closed"}
+          style={{ transform: "translateZ(0)" }}
+        >
+          <Menu className="w-6 h-6" />
+        </motion.button>
 
-          <AnimatePresence>
-            {isMobileMenuOpen && (
-              <motion.div
-                initial={{ scaleX: 0, opacity: 0, x: 10 }}
-                animate={{ scaleX: 1, opacity: 1, x: 0 }}
-                exit={{ scaleX: 0, opacity: 0, x: 10 }}
-                transition={animations.mobileMenu}
-                className="absolute top-0 right-0 origin-right"
-              >
-                <nav className={styles.mobileNav}>
-                  {navItems.map(({ href, label }, index) => (
-                    <motion.a
-                      key={href}
-                      href={href}
-                      onClick={(e) => handleNavClick(e, href)}
-                      className={styles.navLink.mobile}
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.03, duration: 0.15 }}
-                    >
-                      {label}
-                    </motion.a>
-                  ))}
-                  <motion.button 
-                    onClick={toggleMobileMenu} 
-                    className={styles.closeBtn}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.05, duration: 0.15 }}
-                  >
-                    <X className="w-4 h-4" />
-                  </motion.button>
-                </nav>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div
+              variants={variants.menu.mobile}
+              initial="closed"
+              animate="open"
+              exit="closed"
+              className="absolute top-0 right-0 origin-right"
+              style={{ transform: "translateZ(0)" }}
+            >
+              <MenuContent
+                isMobile={true}
+                onClose={() => setIsMobileMenuOpen(false)}
+                handleNavClick={handleNavClick}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
     </>
   );
