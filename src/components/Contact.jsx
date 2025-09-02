@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, memo, useCallback, useMemo } from "react";
-import { motion } from "framer-motion";
+import React, { useState, memo, useCallback, useEffect } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   Mail,
   Phone,
@@ -11,36 +11,64 @@ import {
   Linkedin,
   Twitter,
   MessageCircle,
-  ArrowRight,
   Sparkles,
 } from "lucide-react";
 
-// Cached style constants outside component
-const INPUT_CLASS =
-  "w-full px-5 py-4 bg-gray-800/50 border-2 border-gray-600/50 rounded-xl text-white placeholder-gray-400 focus:border-cyan-400/70 focus:bg-gray-800/70 transition-all duration-300 outline-none backdrop-blur-sm";
+// Simplified floating elements
+const FloatingElement = memo(({ color, size, position, duration, delay }) => {
+  const shouldReduceMotion = useReducedMotion();
+  
+  if (shouldReduceMotion) return null;
 
+  const colorMap = {
+    cyan: "bg-cyan-500/10 border-cyan-400/20",
+    purple: "bg-purple-500/10 border-purple-400/20",
+    emerald: "bg-emerald-500/10 border-emerald-400/20"
+  };
+
+  return (
+    <motion.div
+      className={`absolute rounded-full border ${colorMap[color]} ${size}`}
+      style={position}
+      animate={{ 
+        y: [0, -15, 0],
+        opacity: [0.3, 0.6, 0.3]
+      }}
+      transition={{
+        duration,
+        delay,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
+    />
+  );
+});
+
+FloatingElement.displayName = "FloatingElement";
+
+// Contact data
 const CONTACT_ITEMS = [
   {
     icon: Mail,
     label: "Email",
     value: "gz2750114@gmail.com",
-    href: "mailto:gz2750114@gmail.com?subject=Hello&body=Hi there!",
-    color: "cyan",
+    href: "mailto:gz2750114@gmail.com",
+    color: "cyan"
   },
   {
     icon: Phone,
     label: "Phone",
     value: "+92 (342) 5446567",
-    href: "https://wa.me/923425446567?text=Hello! I would like to get in touch with you.",
-    color: "purple",
+    href: "https://wa.me/923425446567",
+    color: "purple"
   },
   {
     icon: MapPin,
     label: "Location",
     value: "Rawalpindi, Pakistan",
     href: "#",
-    color: "emerald",
-  },
+    color: "emerald"
+  }
 ];
 
 const SOCIAL_LINKS = [
@@ -48,334 +76,168 @@ const SOCIAL_LINKS = [
     icon: Github,
     label: "GitHub",
     href: "https://github.com/cywasay",
-    color: "from-gray-600 to-gray-800",
-    isExternal: true,
+    color: "from-gray-600 to-gray-800"
   },
   {
     icon: Linkedin,
-    label: "LinkedIn",
+    label: "LinkedIn", 
     href: "#",
-    color: "from-blue-500 to-blue-700",
-    isExternal: true,
+    color: "from-blue-500 to-blue-700"
   },
   {
     icon: Twitter,
     label: "Twitter",
-    href: "#",
-    color: "from-sky-400 to-sky-600",
-    isExternal: true,
+    href: "#", 
+    color: "from-sky-400 to-sky-600"
   },
   {
     icon: () => (
-      <svg
-        viewBox="0 0 24 24"
-        className="w-6 h-6 relative z-10 group-hover:rotate-12 transition-transform duration-300"
-        fill="currentColor"
-      >
-        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.570-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.595z" />
+      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.570-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.595z"/>
       </svg>
     ),
     label: "WhatsApp",
-    href: "https://wa.me/923425446567?text=Hello! I would like to get in touch with you.",
-    color: "from-green-500 to-green-700",
-    isExternal: false,
-  },
-];
-
-const FLOATING_CONTACT_ELEMENTS = [
-  {
-    color: "cyan",
-    size: "w-16 h-16",
-    position: { top: "10%", right: "10%" },
-    animate: { x: [0, 30, -15, 0], y: [0, -25, 15, 0], rotate: [0, 180, 360] },
-    duration: 8,
-    delay: 0,
-  },
-  {
-    color: "purple",
-    size: "w-12 h-12",
-    position: { bottom: "15%", left: "8%" },
-    animate: {
-      x: [0, -25, 20, 0],
-      y: [0, 30, -10, 0],
-      rotate: [0, -90, 270, 0],
-    },
-    duration: 6,
-    delay: 1,
-  },
-  {
-    color: "emerald",
-    size: "w-20 h-20",
-    position: { top: "60%", right: "5%" },
-    animate: {
-      x: [0, -20, 35, 0],
-      y: [0, -35, 20, 0],
-      rotate: [0, 90, 180, 360],
-    },
-    duration: 10,
-    delay: 0.5,
-  },
-];
-
-// Stable animation variants
-const FORM_VARIANTS = {
-  hidden: { opacity: 0, x: -50 },
-  visible: { opacity: 1, x: 0 },
-};
-
-const INFO_VARIANTS = {
-  hidden: { opacity: 0, x: 50 },
-  visible: { opacity: 1, x: 0 },
-};
-
-const ITEM_VARIANTS = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 },
-};
-
-const SOCIAL_VARIANTS = {
-  hidden: { opacity: 0, scale: 0.5 },
-  visible: { opacity: 1, scale: 1 },
-};
-
-const HEADER_VARIANTS = {
-  badge: { opacity: 0, y: 20 },
-  title: { opacity: 0, y: 30 },
-  subtitle: { opacity: 0 },
-};
-
-const INPUT_HOVER = { scale: 1.02, transition: { duration: 0.2 } };
-const BUTTON_HOVER = { scale: 1.02, y: -2 };
-const BUTTON_TAP = { scale: 0.98 };
-const ITEM_HOVER = {
-  scale: 1.03,
-  x: 10,
-  boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
-};
-const SOCIAL_HOVER = {
-  scale: 1.15,
-  y: -5,
-  boxShadow: "0 15px 30px rgba(0,0,0,0.3)",
-};
-const SOCIAL_TAP = { scale: 0.9 };
-
-// GPU-accelerated floating elements
-const FloatingContactElement = memo(
-  ({ color, size, position, animate, duration, delay }) => {
-    const style = useMemo(
-      () => ({
-        ...position,
-        background: `radial-gradient(circle, ${
-          color === "cyan"
-            ? "rgba(6, 182, 212, 0.15)"
-            : color === "purple"
-            ? "rgba(139, 92, 246, 0.15)"
-            : "rgba(16, 185, 129, 0.15)"
-        } 0%, transparent 70%)`,
-      }),
-      [color, position]
-    );
-
-    const transition = useMemo(
-      () => ({
-        duration,
-        repeat: Infinity,
-        ease: "easeInOut",
-        delay,
-        repeatType: "reverse",
-      }),
-      [duration, delay]
-    );
-
-    return (
-      <motion.div
-        className={`absolute ${size} rounded-full opacity-20 pointer-events-none`}
-        style={style}
-        animate={animate}
-        transition={transition}
-      />
-    );
+    href: "https://wa.me/923425446567",
+    color: "from-green-500 to-green-700"
   }
-);
+];
 
-FloatingContactElement.displayName = "FloatingContactElement";
+// Floating elements config
+const floatingElements = [
+  { color: "cyan", size: "w-12 h-12", position: { top: "15%", right: "10%" }, duration: 6, delay: 0 },
+  { color: "purple", size: "w-16 h-16", position: { bottom: "20%", left: "8%" }, duration: 8, delay: 1 },
+  { color: "emerald", size: "w-10 h-10", position: { top: "60%", right: "5%" }, duration: 7, delay: 2 }
+];
 
+// Contact form component
 const ContactForm = memo(() => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     subject: "",
-    message: "",
+    message: ""
   });
-
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   }, []);
 
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 1500));
     setIsSubmitting(false);
     setFormData({ name: "", email: "", subject: "", message: "" });
   }, []);
 
-  const spinnerTransition = useMemo(
-    () => ({
-      duration: 1,
-      repeat: Infinity,
-      ease: "linear",
-    }),
-    []
-  );
+  const inputClass = "w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:border-cyan-400 focus:outline-none transition-colors duration-200";
 
   return (
-    <motion.form
-      onSubmit={handleSubmit}
-      className="space-y-6"
-      initial="hidden"
-      whileInView="visible"
-      variants={FORM_VARIANTS}
-      transition={{ duration: 0.6, delay: 0.2 }}
-      viewport={{ once: true }}
-    >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <motion.div whileHover={INPUT_HOVER}>
-          <label className="block text-gray-300 text-sm font-semibold mb-2">
-            Your Name
-          </label>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-gray-300 text-sm font-medium mb-2">Name</label>
           <input
             type="text"
             name="name"
             value={formData.name}
             onChange={handleChange}
             required
-            className={INPUT_CLASS}
-            placeholder="Name"
+            className={inputClass}
+            placeholder="Your name"
           />
-        </motion.div>
-
-          <motion.div whileHover={INPUT_HOVER}>
-          <label className="block text-gray-300 text-sm font-semibold mb-2">
-            Email Address
-          </label>
+        </div>
+        <div>
+          <label className="block text-gray-300 text-sm font-medium mb-2">Email</label>
           <input
             type="email"
             name="email"
             value={formData.email}
             onChange={handleChange}
             required
-            className={INPUT_CLASS}
-            placeholder="john@example.com"
+            className={inputClass}
+            placeholder="your@email.com"
           />
-        </motion.div>
+        </div>
       </div>
 
-      <motion.div whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}>
-        <label className="block text-gray-300 text-sm font-semibold mb-2">
-          Subject
-        </label>
+      <div>
+        <label className="block text-gray-300 text-sm font-medium mb-2">Subject</label>
         <input
           type="text"
           name="subject"
           value={formData.subject}
           onChange={handleChange}
           required
-          className={INPUT_CLASS}
-          placeholder="Let's discuss your project"
+          className={inputClass}
+          placeholder="Project discussion"
         />
-      </motion.div>
+      </div>
 
-      <motion.div whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}>
-        <label className="block text-gray-300 text-sm font-semibold mb-2">
-          Message
-        </label>
+      <div>
+        <label className="block text-gray-300 text-sm font-medium mb-2">Message</label>
         <textarea
           name="message"
           value={formData.message}
           onChange={handleChange}
           required
-          rows={6}
-          className={`${INPUT_CLASS} resize-none`}
-          placeholder="Tell me about your project or just say hello..."
+          rows={5}
+          className={`${inputClass} resize-none`}
+          placeholder="Tell me about your project..."
         />
-      </motion.div>
+      </div>
 
       <motion.button
         type="submit"
         disabled={isSubmitting}
-        whileHover={BUTTON_HOVER}
-        whileTap={BUTTON_TAP}
-        className="group relative w-full px-8 py-4 bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl text-white font-medium text-lg overflow-hidden transition-all duration-300 hover:bg-gray-700/50 hover:border-cyan-400/50 hover:shadow-lg hover:shadow-cyan-400/20 disabled:opacity-50 disabled:cursor-not-allowed"
+        whileHover={shouldReduceMotion ? {} : { scale: 1.02 }}
+        whileTap={shouldReduceMotion ? {} : { scale: 0.98 }}
+        className="w-full px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 rounded-lg text-white font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
       >
-        <span className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-        <span className="relative z-10 flex items-center justify-center gap-3">
-          {isSubmitting ? (
-            <>
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={spinnerTransition}
-                className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
-              />
-              <span>Sending Message...</span>
-            </>
-          ) : (
-            <>
-              <Send className="w-5 h-5 transition-transform group-hover:rotate-12 duration-300" />
-              <span>Send Message</span>
-              <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1 group-hover:scale-110 duration-300" />
-            </>
-          )}
-        </span>
+        {isSubmitting ? (
+          <>
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+            />
+            <span>Sending...</span>
+          </>
+        ) : (
+          <>
+            <Send className="w-4 h-4" />
+            <span>Send Message</span>
+          </>
+        )}
       </motion.button>
-    </motion.form>
+    </form>
   );
 });
 
 ContactForm.displayName = "ContactForm";
 
-const colorMap = {
-  cyan: { icon: "text-cyan-400", gradient: "from-cyan-500/20 to-cyan-600/20" },
-  purple: { icon: "text-purple-400", gradient: "from-purple-500/20 to-purple-600/20" },
-  emerald: { icon: "text-emerald-400", gradient: "from-emerald-500/20 to-emerald-600/20" },
-};
-
+// Contact info component
 const ContactInfo = memo(() => {
-  const handleContactClick = useCallback((item) => {
-    if (item.label === "Phone") {
-      window.open(item.href, "_blank");
-    } else if (item.label === "Email") {
-      window.location.href = item.href;
-    }
-  }, []);
+  const shouldReduceMotion = useReducedMotion();
 
-  const handleSocialClick = useCallback((social, e) => {
-    if (social.label === "WhatsApp") {
-      e.preventDefault();
-      window.open(social.href, "_blank");
-    }
-  }, []);
+  const colorMap = {
+    cyan: { icon: "text-cyan-400", bg: "bg-cyan-500/10" },
+    purple: { icon: "text-purple-400", bg: "bg-purple-500/10" },
+    emerald: { icon: "text-emerald-400", bg: "bg-emerald-500/10" }
+  };
 
   return (
-    <motion.div
-      className="space-y-8"
-      initial="hidden"
-      whileInView="visible"
-      variants={INFO_VARIANTS}
-      transition={{ duration: 0.6, delay: 0.3 }}
-      viewport={{ once: true }}
-    >
+    <div className="space-y-8">
       <div>
-        <h3 className="text-2xl font-bold text-white mb-6 flex items-center">
-          <MessageCircle className="w-6 h-6 mr-3 text-cyan-400" />
+        <h3 className="text-xl font-bold text-white mb-4 flex items-center">
+          <MessageCircle className="w-5 h-5 mr-2 text-cyan-400" />
           Get In Touch
         </h3>
-        <p className="text-gray-300 text-lg leading-relaxed mb-8">
-          I'm always open to discussing new opportunities, collaborations, or
-          just having a friendly chat about technology and development.
+        <p className="text-gray-400 leading-relaxed">
+          I'm always open to discussing new opportunities and collaborations.
         </p>
       </div>
 
@@ -383,248 +245,156 @@ const ContactInfo = memo(() => {
         {CONTACT_ITEMS.map((item, index) => (
           <motion.div
             key={item.label}
-            initial="hidden"
-            whileInView="visible"
-            variants={ITEM_VARIANTS}
-            transition={{ delay: 0.4 + index * 0.1, duration: 0.4 }}
-            whileHover={ITEM_HOVER}
-            className={`group flex items-center space-x-4 p-5 bg-gray-800/40 hover:bg-gray-800/60 border border-gray-600/30 hover:border-gray-500/50 rounded-xl transition-all duration-300 backdrop-blur-sm ${
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1, duration: 0.5 }}
+            whileHover={shouldReduceMotion ? {} : { x: 5 }}
+            className={`flex items-center space-x-4 p-4 bg-gray-800 border border-gray-700 rounded-lg hover:border-gray-600 transition-all duration-200 ${
               item.label !== "Location" ? "cursor-pointer" : ""
             }`}
-            onClick={() => item.label !== "Location" && handleContactClick(item)}
-            style={{ willChange: "transform, box-shadow" }}
+            onClick={() => {
+              if (item.label === "Email") window.location.href = item.href;
+              if (item.label === "Phone") window.open(item.href, "_blank");
+            }}
           >
-            <div
-              className={`p-3 rounded-lg bg-gradient-to-r ${colorMap[item.color].gradient} group-hover:scale-110 transition-transform duration-300`}
-            >
-              <item.icon className={`w-5 h-5 ${colorMap[item.color].icon}`} />
+            <div className={`p-2 rounded-lg ${colorMap[item.color].bg}`}>
+              <item.icon className={`w-4 h-4 ${colorMap[item.color].icon}`} />
             </div>
             <div>
-              <p className="text-gray-400 text-sm font-medium">
-                {item.label}
-              </p>
-              <p
-                className={`text-white font-semibold group-hover:text-cyan-200 transition-colors duration-300 ${
-                  item.label !== "Location" ? "hover:underline" : ""
-                }`}
-              >
-                {item.value}
-              </p>
-              {item.label === "Phone" && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Click to open WhatsApp
-                </p>
-              )}
-              {item.label === "Email" && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Click to send email
-                </p>
-              )}
+              <p className="text-gray-400 text-sm">{item.label}</p>
+              <p className="text-white font-medium">{item.value}</p>
             </div>
           </motion.div>
         ))}
       </div>
 
-      <div className="pt-8 border-t border-gray-700/50">
-        <h4 className="text-lg font-semibold text-white mb-6">
-          Connect With Me
-        </h4>
-        <div className="flex space-x-4">
+      <div className="pt-6 border-t border-gray-700">
+        <h4 className="text-lg font-semibold text-white mb-4">Connect With Me</h4>
+        <div className="flex space-x-3">
           {SOCIAL_LINKS.map((social, index) => (
             <motion.a
               key={social.label}
-              href={social.isExternal ? social.href : "#"}
-              target={social.isExternal ? "_blank" : "_self"}
-              rel={social.isExternal ? "noopener noreferrer" : undefined}
-              onClick={(e) => handleSocialClick(social, e)}
-              initial="hidden"
-              whileInView="visible"
-              variants={SOCIAL_VARIANTS}
-              transition={{ delay: 0.7 + index * 0.1, duration: 0.3 }}
-              whileHover={SOCIAL_HOVER}
-              whileTap={SOCIAL_TAP}
-              className={`p-4 bg-gradient-to-r ${social.color} rounded-xl text-white shadow-lg hover:shadow-xl transition-all duration-300 group relative overflow-hidden cursor-pointer`}
+              href={social.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              initial={{ opacity: 0, scale: 0.8 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.1, duration: 0.3 }}
+              whileHover={shouldReduceMotion ? {} : { scale: 1.1, y: -2 }}
+              className={`p-3 bg-gradient-to-r ${social.color} rounded-lg text-white hover:shadow-lg transition-all duration-200`}
               title={social.label}
-              style={{ willChange: "transform, box-shadow" }}
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
               <social.icon />
             </motion.a>
           ))}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 });
 
 ContactInfo.displayName = "ContactInfo";
 
-export default function Contact() {
-  const pulseAnimation = useMemo(
-    () => ({
-      scale: [1, 1.5, 1],
-      opacity: [1, 0, 1],
-    }),
-    []
-  );
+// Smooth loader component
+const SmoothLoader = memo(({ children, delay = 0 }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
 
-  const pulseTransition = useMemo(
-    () => ({
-      duration: 2,
-      repeat: Infinity,
-      ease: "easeInOut",
-    }),
-    []
-  );
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoaded(true), delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
 
-  const backgroundAnimation = useMemo(
-    () => ({
-      backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
-    }),
-    []
-  );
-
-  const backgroundTransition = useMemo(
-    () => ({
-      duration: 3,
-      repeat: Infinity,
-      ease: "easeInOut",
-    }),
-    []
-  );
+  if (!isLoaded) return <div className="opacity-0" />;
 
   return (
-    <section
-      id="contact"
-      className="relative bg-gradient-to-b from-black via-gray-900 to-gray-950 px-4 sm:px-6 lg:px-8 overflow-hidden"
+    <motion.div
+      initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/10 via-transparent to-purple-900/10"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gray-900/20 via-transparent to-transparent"></div>
+      {children}
+    </motion.div>
+  );
+});
 
-      {FLOATING_CONTACT_ELEMENTS.map((element, index) => (
-        <FloatingContactElement key={index} {...element} />
+SmoothLoader.displayName = "SmoothLoader";
+
+export default function Contact() {
+  const shouldReduceMotion = useReducedMotion();
+
+  return (
+    <section id="contact" className="relative bg-gradient-to-b from-gray-950 to-gray-900 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      {/* Simple background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-gray-900/30 to-transparent" />
+
+      {/* Floating elements */}
+      {!shouldReduceMotion && floatingElements.map((element, index) => (
+        <FloatingElement key={index} {...element} />
       ))}
 
-      <div className="relative max-w-7xl mx-auto py-20 lg:py-32 min-h-screen flex flex-col justify-center">
-        <div className="mb-16 lg:mb-24">
-          <div className="text-center">
-            <motion.div
-              className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-gray-800/60 to-gray-900/60 border border-gray-600/40 rounded-full mb-8 backdrop-blur-sm"
-              initial="badge"
-              whileInView={{ opacity: 1, y: 0 }}
-              variants={HEADER_VARIANTS}
-              transition={{ duration: 0.5 }}
-              whileHover={{ scale: 1.05 }}
-            >
-              <Sparkles className="w-5 h-5 text-cyan-400" />
-              <span className="text-gray-300 font-semibold">Let's Connect</span>
-            </motion.div>
-
-            <motion.h2
-              className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6"
-              initial="title"
-              whileInView={{ opacity: 1, y: 0 }}
-              variants={HEADER_VARIANTS}
-              transition={{ duration: 0.6, delay: 0.1 }}
-            >
-              Contact{" "}
-              <motion.span
-                className="text-transparent bg-gradient-to-r from-cyan-400 via-purple-400 to-emerald-400 bg-clip-text"
-                animate={backgroundAnimation}
-                transition={backgroundTransition}
+      <div className="relative max-w-6xl mx-auto">
+        <SmoothLoader>
+          <div className="min-h-screen flex flex-col justify-center py-20">
+            {/* Header */}
+            <div className="text-center mb-16">
+              <motion.div
+                className="inline-block bg-gray-900 border border-gray-800 rounded-2xl px-6 py-3 mb-6"
+                whileHover={shouldReduceMotion ? {} : { scale: 1.05 }}
               >
-                Me
-              </motion.span>
-            </motion.h2>
-            <motion.p
-              className="text-gray-400 text-xl lg:text-2xl max-w-3xl mx-auto leading-relaxed"
-              initial="subtitle"
-              whileInView={{ opacity: 1 }}
-              variants={HEADER_VARIANTS}
-              transition={{ delay: 0.3, duration: 0.5 }}
-            >
-              Ready to bring your ideas to life? Let's start a conversation and
-              build something amazing together
-            </motion.p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
-          <motion.div
-            className="relative bg-gradient-to-br from-gray-800/60 via-gray-900/40 to-black/60 backdrop-blur-xl border-2 border-gray-600/40 rounded-3xl p-8 lg:p-12 shadow-2xl overflow-hidden"
-            initial={{ opacity: 0, y: 60 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            viewport={{ once: true }}
-            style={{ willChange: "transform, opacity" }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/5 via-purple-400/5 to-transparent"></div>
-            <motion.div
-              className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-cyan-400/15 to-purple-400/15 rounded-full blur-[40px]"
-              animate={{
-                x: [-20, 20, -20],
-                y: [-20, 20, -20],
-                scale: [1, 1.2, 1],
-              }}
-              transition={{
-                duration: 6,
-                repeat: Infinity,
-                ease: "easeInOut",
-                repeatType: "reverse",
-              }}
-            />
-
-            <div className="relative z-10">
-              <div className="flex items-center space-x-3 mb-8">
-                <div className="p-3 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 rounded-xl">
-                  <Mail className="w-6 h-6 text-cyan-400" />
+                <div className="flex items-center space-x-2">
+                  <Sparkles className="w-4 h-4 text-cyan-400" />
+                  <span className="text-gray-300 font-semibold">Let's Connect</span>
                 </div>
-                <h3 className="text-2xl lg:text-3xl font-bold text-white">
-                  Send a Message
-                </h3>
-              </div>
-              <ContactForm />
-            </div>
-          </motion.div>
+              </motion.div>
 
-          <motion.div
-            className="relative"
-            initial={{ opacity: 0, y: 60 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            viewport={{ once: true }}
-          >
-            <ContactInfo />
-
-            <motion.div
-              className="mt-12 p-6 bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 border border-emerald-500/30 rounded-2xl backdrop-blur-sm"
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.8, duration: 0.4 }}
-              whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
-              style={{ willChange: "transform, opacity" }}
-            >
-              <div className="flex items-center space-x-3 mb-3">
-                <div className="relative">
-                  <div className="w-3 h-3 bg-emerald-400 rounded-full"></div>
-                  <motion.div
-                    className="absolute inset-0 w-3 h-3 bg-emerald-400 rounded-full"
-                    animate={pulseAnimation}
-                    transition={pulseTransition}
-                    style={{ willChange: "transform, opacity" }}
-                  />
-                </div>
-                <span className="text-emerald-400 font-semibold">
-                  Available for Work
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6">
+                Contact{" "}
+                <span className="text-transparent bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text">
+                  Me
                 </span>
-              </div>
-              <p className="text-gray-300 text-sm leading-relaxed">
-                Currently open to new opportunities and exciting projects. Let's
-                discuss how we can work together!
+              </h2>
+              
+              <p className="text-gray-400 text-lg max-w-3xl mx-auto">
+                Ready to bring your ideas to life? Let's start a conversation and build something amazing together.
               </p>
-            </motion.div>
-          </motion.div>
-        </div>
+            </div>
+
+            {/* Content Grid */}
+            <SmoothLoader delay={200}>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+                {/* Contact Form */}
+                <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8">
+                  <div className="flex items-center space-x-3 mb-6">
+                    <div className="p-2 bg-cyan-500/10 rounded-lg">
+                      <Mail className="w-5 h-5 text-cyan-400" />
+                    </div>
+                    <h3 className="text-xl font-bold text-white">Send a Message</h3>
+                  </div>
+                  <ContactForm />
+                </div>
+
+                {/* Contact Info */}
+                <div>
+                  <ContactInfo />
+                  
+                  {/* Availability Status */}
+                  <SmoothLoader delay={400}>
+                    <div className="mt-8 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                        <span className="text-emerald-400 font-semibold text-sm">Available for Work</span>
+                      </div>
+                      <p className="text-gray-400 text-sm">
+                        Currently open to new opportunities and exciting projects!
+                      </p>
+                    </div>
+                  </SmoothLoader>
+                </div>
+              </div>
+            </SmoothLoader>
+          </div>
+        </SmoothLoader>
       </div>
     </section>
   );
