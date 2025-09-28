@@ -83,22 +83,12 @@ const floatingElements = [
 
 const projects = [
   {
-    title: "E-Commerce Website",
-    description:
-      "A comprehensive online shopping platform with product catalogs, cart functionality, secure checkout, and user management.",
-    technologies: ["React", "Node.js", "Express", "MongoDB", "Tailwind CSS"],
-    githubUrl: "#",
-    liveUrl: "#",
-    category: "Full Stack",
-    color: "purple",
-  },
-  {
     title: "Practice Portfolio",
     description:
       "A responsive developer portfolio showcasing skills and projects with smooth animations and optimized performance.",
     technologies: ["Next.js", "React", "Tailwind CSS", "Framer Motion"],
     githubUrl: "https://github.com/cywasay/my-portfolio",
-    liveUrl: "https://my-portfolio-56cj3kh8z-cywasays-projects.vercel.app/",
+    liveUrl: "https://my-portfolio-ten-zeta-f2gatip4w8.vercel.app/",
     category: "Web Development",
     color: "cyan",
   },
@@ -118,7 +108,7 @@ const projects = [
       "A modern and elegant cafe website featuring menu showcases, online ordering system, and seamless user experience with responsive design.",
     technologies: ["React", "Next.js", "Tailwind CSS", "Vercel"],
     githubUrl: "https://github.com/cywasay/cafe-bliss",
-    liveUrl: "https://cafe-bliss-gdv48bkq3-cywasays-projects.vercel.app/",
+    liveUrl: "https://cafe-bliss-chi.vercel.app/",
     category: "Web Development",
     color: "rose",
   },
